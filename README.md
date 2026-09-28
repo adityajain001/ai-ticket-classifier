@@ -64,6 +64,67 @@ On this small qualitative test set:
 
 This hand-written test is intended as a qualitative robustness check, not a statistically representative benchmark. It showed that semantic embeddings handled indirect phrasing better than the word-based baseline.
 
+## Zero-Shot Classification Experiment
+
+I also evaluated a local Laya model as a zero-shot classifier. Unlike the supervised
+BoW and MiniLM classifiers, Laya was not trained on the 21,497 training tickets.
+Instead, it was given natural-language descriptions of the 11 support categories
+and asked to choose the most appropriate category.
+
+On the same 5,375-message test set:
+
+| Approach | Task-specific training examples | Accuracy |
+|---|---:|---:|
+| Bag-of-Words + Logistic Regression | 21,497 | 99.67% |
+| MiniLM + Logistic Regression | 21,497 | 99.80% |
+| Laya (zero-shot) | 0 | 85.28% |
+
+Laya correctly classified 4,584 of 5,375 test messages.
+
+### Error Analysis
+
+The zero-shot model's largest confusions included:
+
+- `ORDER → CANCEL`: 193 examples
+- `DELIVERY → SHIPPING`: 190 examples
+
+Manual inspection showed that some apparent errors reflected differences between
+the dataset's labeling conventions and the natural-language category definitions.
+
+For example, messages such as:
+
+> "i want help to cancel order {{Order Number}}"
+
+were labeled `ORDER` in the dataset, while the zero-shot model selected `CANCEL`.
+
+Similarly, some messages containing phrases such as "shipping period" were labeled
+`DELIVERY` by the dataset while Laya selected `SHIPPING`.
+
+This illustrates an important distinction between the two approaches: a supervised
+classifier can learn dataset-specific label conventions from examples, while a
+zero-shot classifier must infer the intended taxonomy from the supplied category
+descriptions.
+
+### Robustness and Out-of-Distribution Tests
+
+On the same eight manually written in-domain messages used for qualitative
+robustness testing:
+
+| Model | Correct |
+|---|---:|
+| Bag-of-Words + Logistic Regression | 4/8 |
+| Laya (zero-shot) | 6/8 |
+| MiniLM + Logistic Regression | 8/8 |
+
+These eight examples are a qualitative robustness check, not a statistical
+estimate of real-world accuracy.
+
+I also added an `OTHER` category described in natural language and tested Laya on
+eight clearly out-of-domain messages covering topics such as weather, sports,
+cooking, general knowledge, and programming. Laya assigned all 8/8 examples to
+`OTHER`. This is also a small qualitative test and should not be interpreted as
+100% out-of-distribution detection accuracy.
+
 ## REST API
 
 The trained classifier is exposed through a FastAPI REST API.
